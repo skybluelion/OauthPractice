@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dearsanta.app.mapper.BoardMapper">
+    <insert id="createBoard" parameterType="com.dearsanta.app.dto.BoardRequestDto">
+        INSERT INTO board (
+            id,
+            board_category_id,
+            title,
+            content,
+            user_id,
+            img_url
+        ) VALUES (
+                     #{id, jdbcType=VARCHAR},
+                     #{boardCategoryId, jdbcType=VARCHAR},
+                     #{title, jdbcType=VARCHAR},
+                     #{content, jdbcType=VARCHAR},
+                     #{userId, jdbcType=VARCHAR},
+                     #{imgUrl, jdbcType=VARCHAR}
+                 )
+    </insert>
+    <select id="getBoard" resultType="com.dearsanta.app.dto.BoardDto">
+        SELECT  id,
+                title,
+                content,
+                created_date AS createdDate,
+                updated_date AS updatedDate,
+                user_id AS userId,
+                img_url AS imgUrl,
+                like_count AS likeCount,
+                view_count AS viewCount
+        FROM    board
+        WHERE   id = #{boardId}
+        AND     is_deleted = 0
+    </select>
+    <update id="updateBoard" parameterType="com.dearsanta.app.domain.Board">
+        UPDATE  board
+        SET     title = #{title, jdbcType=VARCHAR},
+                content = #{content, jdbcType=VARCHAR},
+                img_url = #{imgUrl, jdbcType=VARCHAR},
+                updated_date = sysdate
+        WHERE   id = #{id, jdbcType=VARCHAR}
+    </update>
+    <delete id="deleteBoard">
+        UPDATE  board
+        SET     is_deleted = 1
+        WHERE   id = #{boardId}
+    </delete>
+    <select id="getBoardListWithPaging" parameterType="com.dearsanta.app.dto.Criteria" resultType="com.dearsanta.app.dto.BoardDto">
+        <![CDATA[
+		SELECT  id,
+                title,
+                content,
+                created_date AS createdDate,
+                updated_date AS updatedDate,
+                user_id AS userId,
+                img_url AS imgUrl,
+                like_count AS likeCount,
+                view_count AS viewCount
+		FROM
+			(
+			SELECT /*+ INDEX_DESC(board ${criteria.sorted}) */
+                    rownum AS rn,
+                    id,
+                    title,
+                    content,
+                    created_date,
+                    updated_date,
+                    user_id,
+                    img_url,
+                    like_count,
+                    view_count
+			FROM    board
+			WHERE   board_category_id = #{criteria.selectId}
+			AND     rownum <= #{criteria.pageNum} * #{criteria.pageSize}
+			)
+		WHERE rn > (#{criteria.pageNum}-1) * #{criteria.pageSize}
+		]]>
+    </select>
+
+    <update id="increaseReplyCount" parameterType="java.lang.String">
+        UPDATE  board
+        SET     reply_count = reply_count + 1
+        WHERE   id = #{boardId}
+    </update>
+    <update id="increaseViewCount" parameterType="java.lang.String">
+        UPDATE  board
+        SET     view_count = view_count + 1
+        WHERE   id = #{boardId}
+    </update>
+    <update id="increaseLikeCount" parameterType="java.lang.String">
+        UPDATE  board
+        SET     like_count = like_count + 1
+        WHERE   id = #{boardId}
+    </update>
+    <update id="decreaseLikeCount" parameterType="java.lang.String">
+        UPDATE  board
+        SET     like_count = like_count - 1
+        WHERE   id = #{boardId}
+    </update>
+
+    <insert id="boardLike">
+        INSERT INTO board_like (
+            id,
+            board_id,
+            user_id
+        ) VALUES (
+                  #{id, jdbcType=VARCHAR},
+                  #{boardId, jdbcType=VARCHAR},
+                  #{userId, jdbcType=VARCHAR}
+        )
+    </insert>
+    <delete id="boardUnlike">
+        DELETE FROM board_like
+        WHERE       id = #{likeId}
+    </delete>
+
+    <select id="findLikeId" parameterType="java.lang.String">
+        SELECT  id
+        FROM    board_like
+        WHERE   board_id = #{boardId}
+        AND     user_id = #{userId}
+    </select>
+</mapper>
